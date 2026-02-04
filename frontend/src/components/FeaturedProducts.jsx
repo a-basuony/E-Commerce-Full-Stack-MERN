@@ -132,8 +132,38 @@ const FeaturedProducts = ({ featuredProducts }) => {
                   </div>
                 ))
               ) : (
-                <div className="w-full text-center text-gray-400 py-10">
-                  No featured products available at the moment.
+                <div
+                  className="w-full flex flex-col items-center justify-center py-12"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <ShoppingCart
+                    className="w-16 h-16 text-emerald-400 mb-4 animate-pulse"
+                    aria-hidden="true"
+                  />
+                  <h3 className="text-2xl sm:text-3xl font-semibold text-white mb-2">
+                    Nothing featured right now
+                  </h3>
+                  <p className="text-gray-400 max-w-xl text-center mb-6">
+                    We don't have any featured items at the moment. Explore our
+                    catalog to find the latest arrivals or check back soon —
+                    we'll be adding hand-picked products regularly.
+                  </p>
+
+                  <div className="flex gap-3">
+                    <Link
+                      to="/"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-md shadow-md transition"
+                    >
+                      Browse Products
+                    </Link>
+                    <Link
+                      to="/signup"
+                      className="border border-emerald-600 text-emerald-300 px-4 py-2 rounded-md hover:bg-emerald-800 transition"
+                    >
+                      Get Notified
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
