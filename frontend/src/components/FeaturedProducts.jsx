@@ -1,16 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCartStore } from "../stores/useCartStore";
 
 const FeaturedProducts = ({ featuredProducts }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0); // page index
   const [itemsPerPage, setItemsPerPage] = useState(4);
 
   const { addToCart } = useCartStore();
+  const containerRef = useRef(null);
 
-  // نضمن دائماً أننا نتعامل مع مصفوفة لتجنب أخطاء الـ .map والـ .length
+  // Ensure we always have an array
   const products = Array.isArray(featuredProducts) ? featuredProducts : [];
 
+  // Responsive items per page
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 640) setItemsPerPage(1);
@@ -24,18 +26,44 @@ const FeaturedProducts = ({ featuredProducts }) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const nextSlide = () => {
-    setCurrentIndex((prevIndex) => prevIndex + itemsPerPage);
-  };
+  // Build pages (chunks) based on itemsPerPage
+  const pages = useMemo(() => {
+    if (products.length === 0) return [];
+    const chunks = [];
+    for (let i = 0; i < products.length; i += itemsPerPage) {
+      chunks.push(products.slice(i, i + itemsPerPage));
+    }
+    return chunks;
+  }, [products, itemsPerPage]);
 
-  const prevSlide = () => {
-    setCurrentIndex((prevIndex) => prevIndex - itemsPerPage);
-  };
+  // Clamp current index when pages change
+  useEffect(() => {
+    if (currentIndex > pages.length - 1) {
+      setCurrentIndex(Math.max(0, pages.length - 1));
+    }
+  }, [pages.length, currentIndex]);
+
+  const prevSlide = () => setCurrentIndex((i) => Math.max(0, i - 1));
+  const nextSlide = () =>
+    setCurrentIndex((i) => Math.min(pages.length - 1, i + 1));
 
   const isStartDisabled = currentIndex === 0;
-  // استخدام المتغير الآمن products بدلاً من featuredProducts مباشرة
-  const isEndDisabled =
-    products.length === 0 || currentIndex >= products.length - itemsPerPage;
+  const isEndDisabled = pages.length === 0 || currentIndex >= pages.length - 1;
+
+  const gridColsClass =
+    itemsPerPage === 1
+      ? "grid-cols-1"
+      : itemsPerPage === 2
+        ? "grid-cols-2"
+        : itemsPerPage === 3
+          ? "grid-cols-3"
+          : "grid-cols-4";
+
+  // Keyboard navigation
+  const handleKeyDown = (e) => {
+    if (e.key === "ArrowLeft") prevSlide();
+    if (e.key === "ArrowRight") nextSlide();
+  };
 
   return (
     <div className="py-12">
@@ -43,47 +71,63 @@ const FeaturedProducts = ({ featuredProducts }) => {
         <h2 className="text-center text-5xl sm:text-6xl font-bold text-emerald-400 mb-4">
           Featured
         </h2>
-        <div className="relative">
-          <div className="overflow-hidden">
+
+        <div
+          className="relative"
+          aria-roledescription="carousel"
+          aria-label="Featured products"
+        >
+          <div
+            className="overflow-hidden"
+            ref={containerRef}
+            tabIndex={0}
+            onKeyDown={handleKeyDown}
+          >
             <div
-              className="flex transition-transform duration-300 ease-in-out"
+              className="flex transition-transform duration-500 ease-in-out"
               style={{
-                transform: `translateX(-${currentIndex * (100 / itemsPerPage)}%)`,
-                // الحفاظ على عرض مرن بناءً على عدد العناصر
-                width: `${(products.length / itemsPerPage) * 100}%`,
+                width: `${pages.length * 100}%`, // track width = #pages * 100%
+                transform: `translateX(-${currentIndex * (100 / pages.length)}%)`,
               }}
             >
-              {products.length > 0 ? (
-                products.map((product) => (
+              {pages.length > 0 ? (
+                pages.map((page, pageIdx) => (
                   <div
-                    key={product._id}
-                    style={{ width: `${100 / products.length}%` }}
-                    className="flex-shrink-0 px-2"
+                    key={pageIdx}
+                    style={{ width: `${100 / pages.length}%` }} // each page fills the viewport
+                    className="p-2"
+                    aria-hidden={pageIdx !== currentIndex}
                   >
-                    <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl border border-emerald-500/30 flex flex-col">
-                      <div className="overflow-hidden">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-48 object-cover transition-transform duration-300 ease-in-out hover:scale-110"
-                        />
-                      </div>
-                      <div className="p-4 flex flex-col flex-grow">
-                        <h3 className="text-lg font-semibold mb-2 text-white">
-                          {product.name}
-                        </h3>
-                        <p className="text-emerald-300 font-medium mb-4">
-                          ${(product.price || 0).toFixed(2)}
-                        </p>
-                        <button
-                          onClick={() => addToCart(product)}
-                          className="w-full mt-auto bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-4 rounded transition-colors duration-300 
-                                                    flex items-center justify-center"
+                    <div className={`grid gap-4 ${gridColsClass}`}>
+                      {page.map((product) => (
+                        <div
+                          key={product._id}
+                          className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl border border-emerald-500/30 flex flex-col"
                         >
-                          <ShoppingCart className="w-5 h-5 mr-2" />
-                          Add to Cart
-                        </button>
-                      </div>
+                          <div className="overflow-hidden">
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-48 object-cover transition-transform duration-300 ease-in-out hover:scale-110"
+                            />
+                          </div>
+                          <div className="p-4 flex flex-col flex-grow">
+                            <h3 className="text-lg font-semibold mb-2 text-white">
+                              {product.name}
+                            </h3>
+                            <p className="text-emerald-300 font-medium mb-4">
+                              ${(product.price || 0).toFixed(2)}
+                            </p>
+                            <button
+                              onClick={() => addToCart(product)}
+                              className="w-full mt-auto bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-4 rounded transition-colors duration-300 flex items-center justify-center"
+                            >
+                              <ShoppingCart className="w-5 h-5 mr-2" />
+                              Add to Cart
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))
@@ -95,12 +139,13 @@ const FeaturedProducts = ({ featuredProducts }) => {
             </div>
           </div>
 
-          {/* أزرار التحكم تظهر فقط إذا كان هناك منتجات */}
-          {products.length > itemsPerPage && (
+          {/* Controls */}
+          {pages.length > 1 && (
             <>
               <button
                 onClick={prevSlide}
                 disabled={isStartDisabled}
+                aria-label="Previous featured products"
                 className={`absolute top-1/2 -left-4 transform -translate-y-1/2 p-2 rounded-full transition-colors duration-300 z-10 ${
                   isStartDisabled
                     ? "bg-gray-400 cursor-not-allowed"
@@ -113,6 +158,7 @@ const FeaturedProducts = ({ featuredProducts }) => {
               <button
                 onClick={nextSlide}
                 disabled={isEndDisabled}
+                aria-label="Next featured products"
                 className={`absolute top-1/2 -right-4 transform -translate-y-1/2 p-2 rounded-full transition-colors duration-300 z-10 ${
                   isEndDisabled
                     ? "bg-gray-400 cursor-not-allowed"
@@ -121,6 +167,18 @@ const FeaturedProducts = ({ featuredProducts }) => {
               >
                 <ChevronRight className="w-6 h-6 text-white" />
               </button>
+
+              {/* Indicators */}
+              <div className="flex justify-center mt-4">
+                {pages.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentIndex(idx)}
+                    aria-label={`Go to slide ${idx + 1}`}
+                    className={`w-2 h-2 rounded-full mx-1 ${idx === currentIndex ? "bg-emerald-400" : "bg-gray-500"}`}
+                  />
+                ))}
+              </div>
             </>
           )}
         </div>
