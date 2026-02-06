@@ -22,6 +22,15 @@ const __dirname = path.resolve();
 app.use(express.json({ limit: "10mb" })); // allows you to parse the body of the request
 app.use(cookieParser());
 
+// Test Route لجعلنا نتأكد أن السيرفر يعمل على Vercel
+app.get("/api/test", (req, res) => {
+  res.json({
+    message: "Backend is running successfully on Vercel!",
+    time: new Date().toISOString(),
+    env: process.env.NODE_ENV,
+  });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
