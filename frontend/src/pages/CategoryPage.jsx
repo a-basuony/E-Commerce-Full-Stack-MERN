@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import ProductCard from "../components/ProductCard";
 
 const CategoryPage = () => {
-  // افترضت وجود loading في الـ store الخاص بك، إذا لم يوجد يمكنك حذفه
   const { fetchProductsByCategory, products, loading } = useProductStore();
   const { category } = useParams();
 
@@ -13,7 +12,6 @@ const CategoryPage = () => {
     fetchProductsByCategory(category);
   }, [fetchProductsByCategory, category]);
 
-  // تأكد من أن البيانات مصفوفة فعلاً لتجنب خطأ .map is not a function
   const isProductsArray = Array.isArray(products);
 
   return (
@@ -36,21 +34,18 @@ const CategoryPage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          {/* حالة التحميل */}
           {loading && (
             <p className="text-gray-300 text-center col-span-full">
               Loading products...
             </p>
           )}
 
-          {/* عرض رسالة في حال كانت المصفوفة فارغة أو البيانات القادمة ليست مصفوفة */}
           {!loading && (!isProductsArray || products.length === 0) && (
             <h2 className="text-3xl font-semibold text-gray-300 text-center col-span-full">
               No products found
             </h2>
           )}
 
-          {/* تنفيذ الخريطة فقط إذا كانت البيانات مصفوفة فعلاً */}
           {isProductsArray &&
             products.map((product) => (
               <ProductCard key={product._id} product={product} />
